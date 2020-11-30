@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+    
+    <head>
+        <title>Error impact analyser</title>
+        <link rel="icon" type="image/png" href="https://dt-cdn.net/images/favicon-48x48-transparent-48-9b4df9c769.png">
+        <link rel="stylesheet" href="css/main.css" />
+        <style>
+            .collapsible {
+            background-color: white;
+            color: black;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            }
+
+            .active, .collapsible:hover {
+            background-color: white;
+            }
+
+            .content {
+            padding: 0 18px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            background-color: white;
+            width: 100%;
+            }
+
+            .collapsible:after {
+            content: url("images/dropdownclosed.png");
+            transform: scale(.05);
+            widows: 20px;
+            height:20px;
+            font-size: 13px;
+            color: white;
+            float: left;
+            margin-left: -65px;
+            margin-top: -35px;
+            }
+
+            .step2:after {
+            content: url("images/dropdownclosed.png");
+            transform: scale(.05);
+            widows: 20px;
+            height:20px;
+            font-size: 13px;
+            color: white;
+            float: left;
+            margin-left: 60px;
+            margin-top: -35px;
+            }            
+
+            .active:after {
+            content: url("images/dropdownopen.png");
+            transform: scale(.05);
+            }
+
+            .required:before{
+            content:"*" ;
+            color:red   
+            }
+
+        </style>
+        <script type="text/javascript">
+
+        //var use_case_selected;
+        var lost_basket_selected;
+        var agent_hours_selected;
+        var costs_selected;
+
+        function hideAll() {
+
+                var coll = document.getElementsByClassName("collapsible");
+                var i;
+
+                for (i = 0; i < coll.length; i++) {
+                    if(coll[i].classList.contains("active"))   {
+
+                        coll[i].click();
+
+                    }
+                }
+        }
+
+                function hideResultsTitles() {
+
+                    for(i=0;i<3;i++){
+                        document.getElementsByClassName("basket_results_title")[i].style.display="none";
+                        document.getElementsByClassName("hours_results_title")[i].style.display="none";
+                        document.getElementsByClassName("costs_results_title")[i].style.display="none";
+                    }
+
+                }
+
+                var todaysDate = new Date();
+                var oneDay = new Date();
+                var threeDays = new Date();
+                var sevenDays = new Date();
+
+                var oneDayBefore = todaysDate.getDate() - 1;
+                var threeDaysBefore = todaysDate.getDate() - 3;
+                var sevenDaysBefore = todaysDate.getDate() - 7;
+
+                oneDay.setDate(oneDayBefore);
+                threeDays.setDate(threeDaysBefore);
+                sevenDays.setDate(sevenDaysBefore);
+
+
+            function parseJSON(response) {
+                return response.json();
+            } 
+
+            function fetchErrors() {
+
+                document.getElementById("error_container").style.visibility="visible";
+
+                var tenant = document.getElementById("tenant").value;
+                var token = document.getElementById("token").value;
+                var error = document.getElementById("error").value;
+
+                var errorList = document.getElementById("errorList");
+
+                var myHeaders = new Headers();
+                myHeaders.append("Authorization", "Api-Token " + token);
+
+                var myInit = { method: 'GET',
+                    headers: myHeaders,
+                    cache: 'default',
+		            mode: 'cors',
+                };
+
+                fetch('https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20DISTINCT%20stringProperties.' + error + '%2C%20count(*)%20FROM%20usersession%20WHERE%20stringProperties.' + error + '%20IS%20NOT%20NULL&startTimestamp=' + oneDay.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
+
+                    .then(function(response) {
+
+                        if(!response.ok) {
+                            console.log("error");
+                            var error = { "error":true };
+                            return error;
+                        }
+                        else {
+                            return response.json();
+                        }
+                    })
+
+                    .then(function(jsonResponse) {
+
+                        if(!jsonResponse.error) {
+
+                            document.getElementById("error_box").style.visibility="hidden";
+
+                            for(i= errorList.length; i > -1; i--) {
+                                errorList.remove(i);
+                            }
+
+                            jsonResponse.values.forEach(function(item){
+                                var newError = document.createElement("option");
+                                
+                                if(item[1] < 4000) {
+                                    newError.value = item[0];
+                                    newError.text = item[0];
+                                    errorList.add(newError);
+                                }    
+                            })
+
+                            document.getElementsByClassName("collapsible")[1].click();
+                            document.getElementById("results").style.visibility="hidden";
+                            document.getElementById("step2head").style.visibility="visible";
+
+                            document.getElementsByClassName("collapsible")[0].click();
+
+                            document.getElementById("results_container").style.visibility="hidden";
+                            document.getElementById("results_container").style.display="none";
+
+                        }
+
+                        else {
+
+                            document.getElementById("error_box").style.visibility="visible";
+
+                        }    
+                    })
+            }   
+
+            function analyseErrors() {
+
+                var tenant = document.getElementById("tenant").value;
+                var token = document.getElementById("token").value;
+                var error = document.getElementById("error").value;
+                var conversion = document.getElementById("conversion").value;
+                var single_error = document.getElementById("errorList").value;
+                var original_single_error = single_error;
+                single_error = single_error.replace(/"/g, '\"\"');
+
+                var basket = document.getElementById("basket").value;
+                var margin = document.getElementById("margin").value;
+
+                var percent_users = document.getElementById("percent_users").value;
+                var call_length = document.getElementById("call_length").value;
+                var call_cost = document.getElementById("call_cost").value;
+
+                var error_cost = document.getElementById("error_cost").value;
+
+                var numlostUsers;
+                var lostBasketValue;
+
+                getRawData(tenant, token, error, basket, margin, conversion, single_error, original_single_error, percent_users, call_length, call_cost, error_cost);
+
+                hideAll();
+
+                document.getElementById("results_container").style.visibility="visible";
+                document.getElementById("results_container").style.display="inline-block";
+            }
+
+            function getRawData(tenant, token, error, basket, margin, conversion, single_error, original_single_error, percent_users, call_length, call_cost, error_cost) {
+
+                lost_basket_selected = document.getElementById("lost_order").checked;
+                agent_hours_selected = document.getElementById("agent_hours").checked;
+                costs_selected = document.getElementById("incurred_costs").checked;
+
+                var myHeaders = new Headers();
+                myHeaders.append("Authorization", "Api-Token " + token);
+
+                var myInit = { method: 'GET',
+                    headers: myHeaders,
+                    cache: 'default',
+		            mode: 'cors',
+                };
+
+                fetch('https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20count(*)%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDays.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
+                 
+                    .then(function(response) {
+
+                        console.log("Requests remaining: " + response.headers.get('x-ratelimit-remaining'));
+                        return response.json();
+
+                    })
+
+                    .then(function(jsonResponse) {
+
+                        document.getElementById("resultLoader").style.display="inline-block";
+                        document.getElementById("results").style.display="none";
+
+                        console.log("Extrapolation level is " + jsonResponse.extrapolationLevel);
+                        console.log("We got " + jsonResponse.values[0][0] + " results.");
+
+                        if(jsonResponse.extrapolationLevel > 1 || jsonResponse.values[0][0] > 4999) {
+                            
+                            var numberOfQueriesEx = 0;
+                            var numberOfQueriesLen = 0;
+
+                            if(jsonResponse.extrapolationLevel > 1) {
+                            
+                                numberOfQueriesEx = jsonResponse.extrapolationLevel / 2;
+                            
+                            }
+
+                            if(jsonResponse.values[0][0] > 4999){
+
+                                numberOfQueriesLen = Math.round(jsonResponse.values[0][0] / 5000);
+
+                            }
+
+                            if(numberOfQueriesEx > numberOfQueriesLen) {
+
+                                numberOfQueries = numberOfQueriesEx;
+
+                            }  
+
+                            else if (numberOfQueriesLen > numberOfQueriesEx) {
+
+                                numberOfQueries = numberOfQueriesLen;
+
+                            }                           
+                            
+                            console.log("Will split into " + numberOfQueries + " queries");
+
+                            var todaysDate = new Date();
+                            var sevenDays = new Date();
+                            var todayInt;
+                            var sevenDaysInt;
+
+                            sevenDaysBefore = todaysDate.getDate() - 7;
+
+                            sevenDays.setDate(sevenDaysBefore);
+
+                            todayInt = parseInt(todaysDate.getTime());
+                            sevenDaysInt = parseInt(sevenDays.getTime());
+
+                            diff = todayInt - sevenDaysInt;
+
+                            interval = diff / numberOfQueries;
+
+                            var allUsers = [];
+                            var fetches = [];
+
+                            for(i=0;i<numberOfQueries;i++) {
+                                startTime=sevenDaysInt+(i*interval);
+                                endTime=sevenDaysInt+((i+1)*interval);
+                              
+                                if(lost_basket_selected == true) {
+
+                                    query = 'https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
+
+                                }
+
+                                else {
+
+                                    query = 'https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
+
+                                }
+                                
+                                fetches.push(
+
+                                fetch(query, myInit)    
+
+                                    .then(function(response) {
+
+                                        console.log("Requests remaining: " + response.headers.get('x-ratelimit-remaining'));
+                                        return response.json();
+
+                                    })
+
+                                    .then(function(jsonResponse) {
+                                    
+                                        jsonResponse.values.forEach(function(user){
+                                        
+                                            allUsers.push(user);
+
+                                        })
+                                    })
+                                )
+                            }
+
+                            Promise.all(fetches).then(function() {
+                                console.log("Information for: " + allUsers.length + " users.");
+
+                                var errorAndConvert=[];
+                                var errorAndAbandon=[];
+                                var convert=[];                              
+
+                                allUsers.forEach(function(user) {
+
+                                    if(user[1] == single_error) {
+
+                                        converted=false;
+
+                                        user[4].forEach(function(action){
+
+                                            if(action == conversion) {
+
+                                                converted=true;
+
+                                            }
+                                        })
+
+                                        if(converted==true) {
+
+                                            errorAndConvert.push(user);
+
+                                        }
+
+                                        else {
+
+                                            errorAndAbandon.push(user);
+
+                                        }
+
+                                    }
+
+                                    else {
+
+                                        converted=false;
+
+                                        user[4].forEach(function(action){
+
+                                            if(action == conversion) {
+
+                                                converted=true;
+
+                                            }
+
+                                        })
+
+                                        convert.push(user);
+
+                                    }
+
+                                })
+
+                                totalWithError = errorAndAbandon.length + errorAndConvert.length;
+
+                                console.log(totalWithError + " users got the error");
+                                console.log(errorAndAbandon.length + " users got the error and abandoned");
+
+                                    lostUsers=0;
+                                    lostBasket=0;
+
+                                    lostMobile=0;
+                                    lostTablet=0;
+                                    lostDesktop=0;
+
+                                    var lostTimes=[];
+
+                                    savedUsers=0;
+                                    savedBaskets=0;
+
+                                    errorAndAbandon.forEach(function(user){
+
+                                        userId = user[0];
+                                        startTime = user[2];
+                                        browserType = user[5];
+                                        saved=false;
+
+                                        if(lost_basket_selected == true) {
+
+                                            basketValue = user[5];
+                                            browserType = user[6];
+
+                                        }
+
+                                        convert.forEach(function(item){
+
+                                            if(item[0] == userId && item[2] > startTime) {
+
+                                                saved=true;
+                                            
+                                            }
+
+                                        })
+
+                                        if(saved==true){
+
+                                            savedUsers++;
+
+                                            if(lost_basket_selected == true) {
+
+                                                savedBaskets = savedBaskets + basketValue;    
+                                        
+                                            }
+
+                                        }
+
+                                        if(saved==false){
+
+                                            lostUsers++;
+
+                                            lostTimes.push(startTime);
+
+                                            if(lost_basket_selected == true) {
+
+                                                lostBasket = lostBasket + basketValue;
+
+                                            }  
+
+                                            if(browserType == "Mobile Browser") {
+
+                                                lostMobile++;
+
+                                            }
+
+                                            if(browserType == "Desktop Browser") {
+
+                                                lostDesktop++;
+
+                                            }
+
+                                            if(browserType == "Tablet Browser") {
+
+                                                lostTablet++;
+
+                                            }
+                                        }
+
+                                    })
+
+                                    lostTimes.sort(function(a, b){return a - b});
+
+                                    var dateCheck;
+                                    var currentCount = 0;
+                                    var dayCount = 1;
+                                    dateBreakdown=[];
+
+                                    for(i=0;i<lostTimes.length;i++){
+
+                                        var tempDate = new Date(lostTimes[i]);
+                                        dateString = tempDate.getDate() + "/" + tempDate.getMonth();
+
+                                        if(i==0) {
+
+                                            dateBreakdown.push(["Date","Amount of users"]);
+                                            dateBreakdown.push([dateString, 1]);
+                                            dateCheck = dateString;
+
+                                        }
+
+                                        else if(dateString == dateCheck) {
+
+                                            dateBreakdown[dayCount][1]++;
+
+                                        }
+
+                                        else if(dateString != dateCheck) {
+
+                                            dateBreakdown.push([dateString, 1]);
+                                            dateCheck = dateString;
+                                            dayCount++;
+
+                                        }
+
+                                    }
+
+                                            document.getElementById("lostAnalysis").style.display="block";
+
+                                            document.getElementById("impacted_users").innerText=totalWithError;
+                                            document.getElementById("lost_users").innerText=lostUsers;
+                                            document.getElementById("errorTitle").innerText = 'Error analysed - ' + original_single_error;
+                                            document.getElementById("unconverted_users").innerText=errorAndAbandon.length;
+
+                                            var user_breakdown = [
+                                            ['User type', 'User volume'],
+                                            ['Mobile', lostMobile],
+                                            ['Desktop', lostDesktop],
+                                            ['Tablet', lostTablet]
+                                            ];
+
+                                            drawPieChart(user_breakdown);
+                                            drawBarChart(dateBreakdown);
+
+                                            var check_length = document.querySelectorAll(".checkbox:checked").length;
+
+                                            document.getElementById("lost_user_number_title").innerText="Based on the " + lostUsers + " lost users...";
+
+                                            console.log("check length is " + check_length);
+
+                                            if(lost_basket_selected == true) {
+
+                                                document.getElementById("lost_basket_results").style.display="inline-block";
+
+                                                document.getElementById("lost_basket").innerText="£" + lostBasket.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+
+                                                if(margin == "") {
+
+                                                    document.getElementById("margin_lost_container").style.visibility="hidden";
+                                                    lostMoney = lostBasket;
+
+                                                    fourteenDays = lostMoney * 2;
+                                                    twentyOneDays = lostMoney * 3;
+                                                    twentyEightDays = lostMoney * 4;
+
+                                                }
+
+                                                else {
+
+                                                    lostMoney = lostBasket / (100 / margin);
+                                                    document.getElementById("lost_margin").innerText="£" + lostMoney.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+
+                                                    fourteenDays = lostMoney * 2;
+                                                    twentyOneDays = lostMoney * 3;
+                                                    twentyEightDays = lostMoney * 4;
+
+                                                }
+
+
+
+                                                document.getElementById("lost_text").innerText="The total profit potentially lost based on a " + margin + "% margin.";
+
+                                                document.getElementById("basket_fourteen_results_users").innerText="£" + fourteenDays.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+                                                document.getElementById("basket_fourteen_results_users").style.display="inline-block";
+                                                document.getElementById("basket_twentyone_results_users").innerText="£" + twentyOneDays.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                document.getElementById("basket_twentyone_results_users").style.display="inline-block";
+                                                document.getElementById("basket_twentyeight_results_users").innerText="£" + twentyEightDays.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                document.getElementById("basket_twentyeight_results_users").style.display="inline-block";
+
+                                                if(check_length > 1) {
+
+                                                    var list = document.querySelectorAll(".basket_results_title");
+
+                                                    for(i=0;i<list.length;i++){
+                                                        document.getElementsByClassName("basket_results_title")[i].style.display="inline-block";
+                                                    }
+
+                                                }
+
+                                                else if(check_length == 1) {
+
+                                                    hideResultsTitles();
+
+                                                }
+                                            }    
+
+                                            else if(lost_basket_selected == false) {
+
+                                                document.getElementById("lost_basket_results").style.display="none";
+                                                document.getElementById("basket_fourteen_results_users").style.display="none";
+                                                document.getElementById("basket_twentyone_results_users").style.display="none";
+                                                document.getElementById("basket_twentyeight_results_users").style.display="none";
+
+                                            }
+
+                                            if(agent_hours_selected == true) {
+
+                                                document.getElementById("agent_hours_results").style.display="inline-block";
+
+                                                lost_agent_hours_calc = (lostUsers / 100) * percent_users * call_length;
+                                                lost_agent_hours_hours = lost_agent_hours_calc / 60;
+
+                                                if(call_cost != "") {
+
+                                                    document.getElementById("hours_lost_cost").style.visibility="visible";
+
+                                                    hours_lost_cost_calc = (lostUsers / 100) * percent_users;
+                                                    hours_lost_cost_money = hours_lost_cost_calc * call_cost;
+
+                                                    hours_fourteen_results_cost = hours_lost_cost_money * 2;
+                                                    hours_twentyone_results_cost = hours_lost_cost_money * 3;
+                                                    hours_twentyeight_results_cost = hours_lost_cost_money * 4;
+
+                                                    document.getElementById("hours_fourteen_results_cost").innerText="£" + hours_fourteen_results_cost.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+                                                    document.getElementById("hours_fourteen_results_cost").style.display="inline-block";
+                                                    document.getElementById("hours_twentyone_results_cost").innerText="£" + hours_twentyone_results_cost.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                    document.getElementById("hours_twentyone_results_cost").style.display="inline-block";
+                                                    document.getElementById("hours_twentyeight_results_cost").innerText="£" + hours_twentyeight_results_cost.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                    document.getElementById("hours_twentyeight_results_cost").style.display="inline-block";
+                                                    document.getElementById("hours_lost_cost_result").innerText="£" + hours_lost_cost_money.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+                                                }
+                                                
+
+
+                                                document.getElementById("lost_agent_hours").innerText=lost_agent_hours_hours.toLocaleString('en-GB',{ maximumFractionDigits: 1 });
+
+                                                hours_fourteen_results_users = lost_agent_hours_hours * 2;
+                                                hours_twentyone_results_users = lost_agent_hours_hours * 3;
+                                                hours_twentyeight_results_users = lost_agent_hours_hours * 4;
+
+                                                document.getElementById("hours_fourteen_results_users").innerText=hours_fourteen_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 1 }) + " hours";
+                                                document.getElementById("hours_fourteen_results_users").style.display="inline-block";
+                                                document.getElementById("hours_twentyone_results_users").innerText=hours_twentyone_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 1 }) + " hours";
+                                                document.getElementById("hours_twentyone_results_users").style.display="inline-block";
+                                                document.getElementById("hours_twentyeight_results_users").innerText=hours_twentyeight_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 1 }) + " hours"; 
+                                                document.getElementById("hours_twentyeight_results_users").style.display="inline-block";
+
+                                                if(check_length > 1) {
+
+                                                    var list = document.querySelectorAll(".hours_results_title");
+
+                                                    for(i=0;i<list.length;i++){
+                                                        document.getElementsByClassName("hours_results_title")[i].style.display="inline-block";
+                                                    }
+
+                                                }
+
+                                                else if(check_length == 1){
+
+                                                    hideResultsTitles();
+
+                                                }
+                                            }  
+                                            
+                                            else if (agent_hours_selected == false) {
+
+                                                document.getElementById("agent_hours_results").style.display="none";
+                                                document.getElementById("hours_fourteen_results_cost").style.display="none";
+                                                document.getElementById("hours_twentyone_results_cost").style.display="none";
+                                                document.getElementById("hours_twentyeight_results_cost").style.display="none";
+                                                document.getElementById("hours_fourteen_results_users").style.display="none";
+                                                document.getElementById("hours_twentyone_results_users").style.display="none";
+                                                document.getElementById("hours_twentyeight_results_users").style.display="none";
+
+                                            }
+
+                                            if(costs_selected == true) {
+
+                                                document.getElementById("incurred_costs_results").style.display="inline-block";
+
+                                                costs_incurred = lostUsers * error_cost;
+
+                                                document.getElementById("incurred_costs_result").innerText="£" + costs_incurred.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+
+                                                cost_fourteen_results_users = costs_incurred * 2;
+                                                cost_twentyone_results_users = costs_incurred * 3;
+                                                cost_twentyeight_results_users = costs_incurred * 4;
+
+                                                document.getElementById("lost_text").innerText="The total profit potentially lost based on a " + margin + "% margin.";
+
+                                                document.getElementById("cost_fourteen_results_users").innerText="£" + cost_fourteen_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+                                                document.getElementById("cost_fourteen_results_users").style.display="inline-block";
+                                                document.getElementById("cost_twentyone_results_users").innerText="£" + cost_twentyone_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                document.getElementById("cost_twentyone_results_users").style.display="inline-block";
+                                                document.getElementById("cost_twentyeight_results_users").innerText="£" + cost_twentyeight_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                document.getElementById("cost_twentyeight_results_users").style.display="inline-block";
+
+                                                if(check_length > 1) {
+
+                                                    var list = document.querySelectorAll(".costs_results_title");
+
+                                                    for(i=0;i<list.length;i++){
+                                                        document.getElementsByClassName("costs_results_title")[i].style.display="inline-block";
+                                                    }
+
+                                                }
+
+                                                else if(check_length == 1){
+
+                                                    hideResultsTitles();
+
+                                                }
+                                                
+                                            }    
+
+                                            else if (costs_selected == false) {
+
+                                                document.getElementById("incurred_costs_results").style.display="none";
+                                                document.getElementById("cost_fourteen_results_users").style.display="none";
+                                                document.getElementById("cost_twentyone_results_users").style.display="none";
+                                                document.getElementById("cost_twentyeight_results_users").style.display="none";
+
+                                            }
+
+                                            document.getElementById("results").style.visibility="visible";
+                                            document.getElementById("results").style.display="inline-block";
+                                            document.getElementById("resultLoader").style.display="none";
+                                
+                            })
+                            
+                        }
+
+                        else {
+                            console.log("Let's try one");
+
+                            var todaysDate = new Date();
+                            var sevenDays = new Date();
+                            var todayInt;
+                            var sevenDaysInt;
+
+                            sevenDaysBefore = todaysDate.getDate() - 7;
+
+                            sevenDays.setDate(sevenDaysBefore);
+
+                            todayInt = parseInt(todaysDate.getTime());
+                            sevenDaysInt = parseInt(sevenDays.getTime());
+
+                            if(lost_basket_selected == true) {
+
+                                query = 'https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
+
+                            }
+
+                            else {
+
+                                query = 'https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
+
+                            }
+
+                            fetch(query, myInit)    
+
+                                .then(function(response) {
+
+                                    console.log("Requests remaining: " + response.headers.get('x-ratelimit-remaining'));
+                                    return response.json();
+
+                                })
+
+                                .then(function(jsonResponse) {
+
+                                    allUsers = jsonResponse.values;
+
+                                    console.log("Information for: " + allUsers.length + " users.");
+
+                                    var errorAndConvert=[];
+                                var errorAndAbandon=[];
+                                var convert=[];                              
+
+                                allUsers.forEach(function(user) {
+
+                                    if(user[1] == single_error) {
+
+                                        converted=false;
+
+                                        user[4].forEach(function(action){
+
+                                            if(action == conversion) {
+
+                                                converted=true;
+
+                                            }
+                                        })
+
+                                        if(converted==true) {
+
+                                            errorAndConvert.push(user);
+
+                                        }
+
+                                        else {
+
+                                            errorAndAbandon.push(user);
+
+                                        }
+
+                                    }
+
+                                    else {
+
+                                        converted=false;
+
+                                        user[4].forEach(function(action){
+
+                                            if(action == conversion) {
+
+                                                converted=true;
+
+                                            }
+
+                                        })
+
+                                        convert.push(user);
+
+                                    }
+
+                                })
+
+                                totalWithError = errorAndAbandon.length + errorAndConvert.length;
+
+                                console.log(totalWithError + " users got the error");
+                                console.log(errorAndAbandon.length + " users got the error and abandoned");
+
+                                    lostUsers=0;
+                                    lostBasket=0;
+
+                                    lostMobile=0;
+                                    lostTablet=0;
+                                    lostDesktop=0;
+
+                                    var lostTimes=[];
+
+                                    savedUsers=0;
+                                    savedBaskets=0;
+
+                                    errorAndAbandon.forEach(function(user){
+
+                                        userId = user[0];
+                                        startTime = user[2];
+                                        browserType = user[5];
+                                        saved=false;
+
+                                        if(lost_basket_selected == true) {
+
+                                            basketValue = user[5];
+                                            browserType = user[6];
+
+                                        }
+
+                                        convert.forEach(function(item){
+
+                                            if(item[0] == userId && item[2] > startTime) {
+
+                                                saved=true;
+                                            
+                                            }
+
+                                        })
+
+                                        if(saved==true){
+
+                                            savedUsers++;
+
+                                            if(lost_basket_selected == true) {
+
+                                                savedBaskets = savedBaskets + basketValue;    
+                                        
+                                            }
+
+                                        }
+
+                                        if(saved==false){
+
+                                            lostUsers++;
+
+                                            lostTimes.push(startTime);
+
+                                            if(lost_basket_selected == true) {
+
+                                                lostBasket = lostBasket + basketValue;
+
+                                            }  
+
+                                            if(browserType == "Mobile Browser") {
+
+                                                lostMobile++;
+
+                                            }
+
+                                            if(browserType == "Desktop Browser") {
+
+                                                lostDesktop++;
+
+                                            }
+
+                                            if(browserType == "Tablet Browser") {
+
+                                                lostTablet++;
+
+                                            }
+                                        }
+
+                                    })
+
+                                    lostTimes.sort(function(a, b){return a - b});
+
+                                    var dateCheck;
+                                    var currentCount = 0;
+                                    var dayCount = 1;
+                                    dateBreakdown=[];
+
+                                    for(i=0;i<lostTimes.length;i++){
+
+                                        var tempDate = new Date(lostTimes[i]);
+                                        dateString = tempDate.getDate() + "/" + tempDate.getMonth();
+
+                                        if(i==0) {
+
+                                            dateBreakdown.push(["Date","Amount of users"]);
+                                            dateBreakdown.push([dateString, 1]);
+                                            dateCheck = dateString;
+
+                                        }
+
+                                        else if(dateString == dateCheck) {
+
+                                            dateBreakdown[dayCount][1]++;
+
+                                        }
+
+                                        else if(dateString != dateCheck) {
+
+                                            dateBreakdown.push([dateString, 1]);
+                                            dateCheck = dateString;
+                                            dayCount++;
+
+                                        }
+
+                                    }
+
+                                            document.getElementById("lostAnalysis").style.display="block";
+
+                                            document.getElementById("impacted_users").innerText=totalWithError;
+                                            document.getElementById("lost_users").innerText=lostUsers;
+                                            document.getElementById("errorTitle").innerText = 'Error analysed - ' + original_single_error;
+                                            document.getElementById("unconverted_users").innerText=errorAndAbandon.length;
+
+                                            var user_breakdown = [
+                                            ['User type', 'User volume'],
+                                            ['Mobile', lostMobile],
+                                            ['Desktop', lostDesktop],
+                                            ['Tablet', lostTablet]
+                                            ];
+
+                                            drawPieChart(user_breakdown);
+                                            drawBarChart(dateBreakdown);
+
+                                            var check_length = document.querySelectorAll(".checkbox:checked").length;
+
+                                            document.getElementById("lost_user_number_title").innerText="Based on the " + lostUsers + " lost users...";
+
+                                            console.log("check length is " + check_length);
+
+                                            if(lost_basket_selected == true) {
+
+                                                document.getElementById("lost_basket_results").style.display="inline-block";
+
+                                                document.getElementById("lost_basket").innerText="£" + lostBasket.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+
+                                                if(margin == "") {
+
+                                                    document.getElementById("margin_lost_container").style.visibility="hidden";
+                                                    lostMoney = lostBasket;
+
+                                                    fourteenDays = lostMoney * 2;
+                                                    twentyOneDays = lostMoney * 3;
+                                                    twentyEightDays = lostMoney * 4;
+
+                                                }
+
+                                                else {
+
+                                                    lostMoney = lostBasket / (100 / margin);
+                                                    document.getElementById("lost_margin").innerText="£" + lostMoney.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+
+                                                    fourteenDays = lostMoney * 2;
+                                                    twentyOneDays = lostMoney * 3;
+                                                    twentyEightDays = lostMoney * 4;
+
+                                                }
+
+
+
+                                                document.getElementById("lost_text").innerText="The total profit potentially lost based on a " + margin + "% margin.";
+
+                                                document.getElementById("basket_fourteen_results_users").innerText="£" + fourteenDays.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+                                                document.getElementById("basket_fourteen_results_users").style.display="inline-block";
+                                                document.getElementById("basket_twentyone_results_users").innerText="£" + twentyOneDays.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                document.getElementById("basket_twentyone_results_users").style.display="inline-block";
+                                                document.getElementById("basket_twentyeight_results_users").innerText="£" + twentyEightDays.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                document.getElementById("basket_twentyeight_results_users").style.display="inline-block";
+
+                                                if(check_length > 1) {
+
+                                                    var list = document.querySelectorAll(".basket_results_title");
+
+                                                    for(i=0;i<list.length;i++){
+                                                        document.getElementsByClassName("basket_results_title")[i].style.display="inline-block";
+                                                    }
+
+                                                }
+
+                                                else if(check_length == 1) {
+
+                                                    hideResultsTitles();
+
+                                                }
+                                            }    
+
+                                            else if(lost_basket_selected == false) {
+
+                                                document.getElementById("lost_basket_results").style.display="none";
+                                                document.getElementById("basket_fourteen_results_users").style.display="none";
+                                                document.getElementById("basket_twentyone_results_users").style.display="none";
+                                                document.getElementById("basket_twentyeight_results_users").style.display="none";
+
+                                            }
+
+                                            if(agent_hours_selected == true) {
+
+                                                document.getElementById("agent_hours_results").style.display="inline-block";
+
+                                                lost_agent_hours_calc = (lostUsers / 100) * percent_users * call_length;
+                                                lost_agent_hours_hours = lost_agent_hours_calc / 60;
+
+                                                if(call_cost != "") {
+
+                                                    document.getElementById("hours_lost_cost").style.visibility="visible";
+
+                                                    hours_lost_cost_calc = (lostUsers / 100) * percent_users;
+                                                    hours_lost_cost_money = hours_lost_cost_calc * call_cost;
+
+                                                    hours_fourteen_results_cost = hours_lost_cost_money * 2;
+                                                    hours_twentyone_results_cost = hours_lost_cost_money * 3;
+                                                    hours_twentyeight_results_cost = hours_lost_cost_money * 4;
+
+                                                    document.getElementById("hours_fourteen_results_cost").innerText="£" + hours_fourteen_results_cost.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+                                                    document.getElementById("hours_fourteen_results_cost").style.display="inline-block";
+                                                    document.getElementById("hours_twentyone_results_cost").innerText="£" + hours_twentyone_results_cost.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                    document.getElementById("hours_twentyone_results_cost").style.display="inline-block";
+                                                    document.getElementById("hours_twentyeight_results_cost").innerText="£" + hours_twentyeight_results_cost.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                    document.getElementById("hours_twentyeight_results_cost").style.display="inline-block";
+                                                    document.getElementById("hours_lost_cost_result").innerText="£" + hours_lost_cost_money.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+                                                }
+                                                
+
+
+                                                document.getElementById("lost_agent_hours").innerText=lost_agent_hours_hours.toLocaleString('en-GB',{ maximumFractionDigits: 1 });
+
+                                                hours_fourteen_results_users = lost_agent_hours_hours * 2;
+                                                hours_twentyone_results_users = lost_agent_hours_hours * 3;
+                                                hours_twentyeight_results_users = lost_agent_hours_hours * 4;
+
+                                                document.getElementById("hours_fourteen_results_users").innerText=hours_fourteen_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 1 }) + " hours";
+                                                document.getElementById("hours_fourteen_results_users").style.display="inline-block";
+                                                document.getElementById("hours_twentyone_results_users").innerText=hours_twentyone_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 1 }) + " hours";
+                                                document.getElementById("hours_twentyone_results_users").style.display="inline-block";
+                                                document.getElementById("hours_twentyeight_results_users").innerText=hours_twentyeight_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 1 }) + " hours"; 
+                                                document.getElementById("hours_twentyeight_results_users").style.display="inline-block";
+
+                                                if(check_length > 1) {
+
+                                                    var list = document.querySelectorAll(".hours_results_title");
+
+                                                    for(i=0;i<list.length;i++){
+                                                        document.getElementsByClassName("hours_results_title")[i].style.display="inline-block";
+                                                    }
+
+                                                }
+
+                                                else if(check_length == 1){
+
+                                                    hideResultsTitles();
+
+                                                }
+                                            }  
+                                            
+                                            else if (agent_hours_selected == false) {
+
+                                                document.getElementById("agent_hours_results").style.display="none";
+                                                document.getElementById("hours_fourteen_results_cost").style.display="none";
+                                                document.getElementById("hours_twentyone_results_cost").style.display="none";
+                                                document.getElementById("hours_twentyeight_results_cost").style.display="none";
+                                                document.getElementById("hours_fourteen_results_users").style.display="none";
+                                                document.getElementById("hours_twentyone_results_users").style.display="none";
+                                                document.getElementById("hours_twentyeight_results_users").style.display="none";
+
+                                            }
+
+                                            if(costs_selected == true) {
+
+                                                document.getElementById("incurred_costs_results").style.display="inline-block";
+
+                                                costs_incurred = lostUsers * error_cost;
+
+                                                document.getElementById("incurred_costs_result").innerText="£" + costs_incurred.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+
+                                                cost_fourteen_results_users = costs_incurred * 2;
+                                                cost_twentyone_results_users = costs_incurred * 3;
+                                                cost_twentyeight_results_users = costs_incurred * 4;
+
+                                                document.getElementById("lost_text").innerText="The total profit potentially lost based on a " + margin + "% margin.";
+
+                                                document.getElementById("cost_fourteen_results_users").innerText="£" + cost_fourteen_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
+                                                document.getElementById("cost_fourteen_results_users").style.display="inline-block";
+                                                document.getElementById("cost_twentyone_results_users").innerText="£" + cost_twentyone_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                document.getElementById("cost_twentyone_results_users").style.display="inline-block";
+                                                document.getElementById("cost_twentyeight_results_users").innerText="£" + cost_twentyeight_results_users.toLocaleString('en-GB',{ maximumFractionDigits: 0 }); 
+                                                document.getElementById("cost_twentyeight_results_users").style.display="inline-block";
+
+                                                if(check_length > 1) {
+
+                                                    var list = document.querySelectorAll(".costs_results_title");
+
+                                                    for(i=0;i<list.length;i++){
+                                                        document.getElementsByClassName("costs_results_title")[i].style.display="inline-block";
+                                                    }
+
+                                                }
+
+                                                else if(check_length == 1){
+
+                                                    hideResultsTitles();
+
+                                                }
+                                                
+                                            }    
+
+                                            else if (costs_selected == false) {
+
+                                                document.getElementById("incurred_costs_results").style.display="none";
+                                                document.getElementById("cost_fourteen_results_users").style.display="none";
+                                                document.getElementById("cost_twentyone_results_users").style.display="none";
+                                                document.getElementById("cost_twentyeight_results_users").style.display="none";
+
+                                            }
+
+                                            document.getElementById("results").style.visibility="visible";
+                                            document.getElementById("results").style.display="inline-block";
+                                            document.getElementById("resultLoader").style.display="none";
+
+
+                                })
+                        }
+
+                    })    
+
+            }
+
+
+
+ 
+        </script>
+
+        
+
+    </head>
+
+    <body>
+
+        <div class="nav has-no-secondary">
+
+            <a class="nav__brand" >
+              <img class="nav__logo" src="images/dynatrace-logo.svg" alt="dynatrace logo"/>
+            </a>
+          
+            <nav id="nav-bar-example1" class="nav__bar">
+            </nav>
+          
+          </div>
+   
+    <div id="main" style="margin-left: 50px; margin-top: 25px">
+
+            <div id="config_container" style=" width: 800px; margin-left: 5px; margin-bottom: 20px">
+
+            <h3 class="collapsible step1" style="width:220px">Step 1 - Config</h3>    
+
+
+            <div style="width: 700px" class="content">
+
+            <div id="tenant_container" style="float:left">
+                <label for="tenant" class="label required">Tenant Id</label>
+                <input style="width:150px;" type="text" class="inputfield" placeholder="xxxxxxxx.live.dynatrace.com" id="tenant" value=""/>
+            </div>
+
+            <div id="token_container" style="float:left; margin-left: 5px">
+                <label for="token" class="label required">API token</label>
+                <input style="width:250px;" type="text" class="inputfield" placeholder="User session access needed" id="token" value=""/>
+            </div>
+
+            <div id="property_container" style="float:left; margin-left: 5px">
+                <label for="tag" class="label required">Error property</label>
+                <input style="width:150px;" type="text" class="inputfield" placeholder="Must be a string" id="error" value=""/>
+            </div>
+
+            <br /><br /><br />
+
+
+
+                <div id="conversion_container" style="float:left;">
+                    <label for="conversion" class="label required">Conversion action</label>
+                    <input style="width:300px;" type="text" class="inputfield" placeholder="Exact name of the action" id="conversion" value=""/>
+                </div>        
+
+
+            <br /><br />
+            
+            
+
+            <br /><br />
+
+            <div id="lost_order_container" style="float:left; width: 200px">
+                <img src="images/cart-options.png" height=100px width=100px style = "margin-left: 25px"/>
+                <br />
+                <b style="font-size: larger">Lost orders</b>
+                <br />
+                <div style="font-size: small"> Quantify the revenue at risk from users that have not converted (and did not return) after encountering an error. </div>
+                <div style="margin-left: 70px; margin-top: 20px; margin-bottom: -20px">
+                    <input type="checkbox" class="checkbox" id="lost_order"><label class="checkbox__label" for="lost_order"><span class="checkbox__caption"></span></label>
+                </div>
+                <br /><br />
+                <div id="tenant_container" style="margin-top: 5px">
+                    <label for="tenant" class="label required">Basket property</label>
+                    <input style="width:150px;" type="text" class="inputfield" placeholder="Must be a double" id="basket" value=""/>
+                </div>
+                <br />
+                <div id="margin_container">
+                    <label for="margin" class="label">Margin (%)</label>
+                    <input style="width:150px;" type="text" class="inputfield" placeholder="% percent" id="margin" value=""/>
+                </div>
+            </div>
+
+            <div id="agent_hours_container" style="float: left; margin-left: 5px; width: 200px">
+                <img src="images/support-options.png" height=100px width=100px style = "margin-left: 25px"/>
+                <br />
+                <b style="font-size: larger">Agent hours</b>
+                <br />
+                <div style="font-size: small"> Estimate the hours (and cost, where relevant) to be spent by support staff, dealing with enquiries due to an error. </div>
+                <div style="margin-left: 70px; margin-top: 20px; margin-bottom: -20px">
+                    <input type="checkbox" class="checkbox" id="agent_hours"><label class="checkbox__label" for="agent_hours"><span class="checkbox__caption"></span></label>
+                </div>
+                <br />
+                <div id="percent_users_container" style="margin-top: 10px">
+                    <label for="percent_users" class="label required">% of users who call in when experiencing an error</label>
+                    <input style="width:150px;" type="text" class="inputfield" placeholder="Must be an integer" id="percent_users" value=""/>
+                </div>
+                <br />
+                <div id="call_length_container" style="margin-top: 10px">
+                    <label for="call_length" class="label required">Average length of a call in <br /> minutes</label>
+                    <input style="width:150px;" type="text" class="inputfield" placeholder="Must be an integer" id="call_length" value=""/>
+                </div>
+                <br />
+                <div id="call_cost_container">
+                    <label for="call_cost" class="label">Average cost of a call</label>
+                    <input style="width:150px;" type="text" class="inputfield" placeholder="Value in £" id="call_cost" value=""/>
+                </div>
+            </div>
+
+            <div id="cost_container" style="margin-left: 5px; float: left; width: 200px">
+                <img src="images/sales-options.png" height=100px width=100px style = "margin-left: 25px"/>
+                <br />
+                <b style="font-size: larger">Incurred costs</b>
+                <br />
+                <div style="font-size: small"> Total up the potential costs incurred from an error hitting a user, for example a penalty due to an SLA. </div>
+                <div style="margin-left: 70px; margin-top: 20px; margin-bottom: -20px">
+                    <input type="checkbox" class="checkbox" id="incurred_costs"><label class="checkbox__label" for="incurred_costs"><span class="checkbox__caption"></span></label>
+                </div>
+                <br /><br />
+                <div id="error_cost_container" style="margin-top: 5px">
+                    <label for="error_cost" class="label required">Cost of an error</label>
+                    <input style="width:150px;" type="text" class="inputfield" placeholder="Value in £" id="error_cost" value=""/>
+                </div>
+            </div> 
+
+       
+
+            <div id="fetchErrors_container" style="width: 500px;">
+                <button id="fetchErrors" disabled style="margin-top: 50px; width: 600px" role="button" type="button" class="btn btn--primary" onclick="fetchErrors()">Fetch errors</button>
+            </div>
+
+            <br /> 
+            <div id="error_box" style="color:red; visibility: hidden;">Error fetching data - please check config fields are accurate.</div>
+            
+
+        </div>
+        </div>
+
+
+            <h3 id="step2head" class="collapsible step2" style="width:350px; visibility: hidden;">Step 2 - Select your error</h3> 
+
+            <div id="error_container" style="display: inline-block; width: 700px; margin-left: 5px; visibility: hidden" class="content"> 
+                
+                        
+                <select class="select" id="errorList" style="width: 500px">
+                    <option value="loading" selected="selected">Loading...</option>
+                </select>
+
+                <div id="fetchErrors_container" style="display: inline-block; width: 90px; margin-left: 5px;">
+                    <button id="fetchErrors" role="button" type="button" class="btn btn--primary" onclick="analyseErrors()">Analyse</button>
+                </div>
+
+                
+            
+            </div>
+
+            <br /><br /><br />
+
+        <div id="results_container" style="display: inline-block; width: 900px; margin-left: 20px; visibility: hidden;">     
+
+                <h3>Step 3 - Automated error analysis</h3>  
+                
+                <div class="loading" id="resultLoader" style="margin-left: 20px; margin-top: 20px">
+                    <svg class="loading__distractor" width="30px" height="30px" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+                        <circle class="loading__path" cx="15" cy="15" r="12"></circle>
+                    </svg>
+                    <p class="loading__text">Loading...</p>
+                </div>
+
+                <div id="results" style="visibility: hidden;">
+
+                <h4 id="errorTitle">Error analysed - "---"</h4> 
+                <h3>Based on the last 7 days...</h3>
+
+                <div id="impacted_container" style="width: 300px; float:left">
+                    <div style="float: left;margin-left:-5px; margin-top:6px"><img src="images/user-blue.png" alt="user" width=60px height=60px></div>
+                    <div id="impacted_users" style="font-size: 50px; float:left">--</div>
+                    <div style="float:left; margin-top:12px; margin-left: 5px">Impacted<br />users</div>
+                    <div style="float: left; margin-left: 5px; font-size: 12px">Total number of users that received the error.</div>
+                </div>
+
+                <div id="unconverted_container" style="width: 300px; float:left">
+                    <div style="float: left;margin-left:-5px; margin-top:6px"><img src="images/user-purple.png" alt="user" width=60px height=60px></div>
+                    <div id="unconverted_users" style="font-size: 50px; float:left">--</div>
+                    <div style="float:left; margin-top:12px; margin-left: 5px">Unconverted<br />users</div>
+                    <div style="float: left; margin-left: 5px; font-size: 12px">Of the impacted users, the number who did not<br />convert <i>in that session</i>.</div>
+                </div>
+
+                <div id="lost_container" style="width: 300px; float:left">
+                    <div style="float: left;margin-left:-5px; margin-top:6px"><img src="images/user-green.png" alt="user" width=60px height=60px></div>
+                    <div id="lost_users" style="font-size: 50px; float:left">--</div>
+                    <div style="float:left; margin-top:12px; margin-left: 5px">Lost<br />users</div>
+                    <div style="float: left; margin-left: 5px; font-size: 12px">Of the users who did not convert, how many did <br />not return later to convert.</div>
+                </div>
+
+               <br />
+
+                <div id="user_breakdown" style="width: 400px; float:left; margin-top: 20px; margin-bottom: 50px">
+
+                    <div id="user_breakdown"></div>
+
+                </div>
+
+                <div id="user_breakdown" style="width: 500px; float:left; margin-top: 20px; margin-bottom: 50px">
+
+                    <div id="over_time"></div>
+
+                </div>
+
+
+                <br />
+
+
+
+
+
+                <h3 id="lost_user_number_title" style="margin-top:100px">Based on the -- lost users...</h3>
+
+                <div id="lost_basket_results" style="display: none; float: left; margin-bottom: 20px;  width: 100%">
+         
+                <div id="lostAnalysis" style="margin-bottom: 20px">
+                <div id="lost_baskets_container" style="width: 350px; float:left">
+                    <div style="float: left;margin-left:-5px; margin-top:6px"><img src="images/cart-options.png" alt="user" width=60px height=60px></div>
+                    <div id="lost_basket" style="font-size: 40px; float:left; margin-top: 10px">£--.--</div>
+                    <div style="float:left; margin-top:17px; margin-left: 15px">Revenue<br />at risk</div>
+                    <div id="test" style="float: left; margin-left: 5px; font-size: 12px">Total basket value potentially at risk from the lost users.</div>
+                </div>
+
+                <div id="margin_lost_container" style="width: 350px; float:left; margin-left: 20px">
+                    <div style="float: left;margin-left:-5px; margin-top:6px"><img src="images/sales-purple.png" alt="user" width=60px height=60px></div>
+                    <div id="lost_margin" style="font-size: 40px; float:left; margin-top: 10px">£--.--</div>
+                    <div style="float:left; margin-top:17px; margin-left: 15px">Potential lost<br />profit</div>
+                    <div id="lost_text" style="float: left; margin-left: 5px; font-size: 12px">The total profit potentially lost based on a 10% margin.</div>
+                </div>   
+                </div>      
+           
+                </div>
+
+
+
+                <div id="agent_hours_results" style="display: none; margin-bottom: 20px;  width: 100%">
+             
+                    <div id="hours_lost_analysis" style="margin-bottom: 20px">
+                    <div id="hours_lost_container" style="width: 350px; float:left">
+                        <div style="float: left;margin-left:-5px; margin-top:6px"><img src="images/time.png" alt="user" width=60px height=60px></div>
+                        <div id="lost_agent_hours" style="font-size: 40px; float:left; margin-top: 10px">---</div>
+                        <div style="float:left; margin-top:17px; margin-left: 15px">Agent hours<br />lost</div>
+                        <div  style="float: left; margin-left: 5px; font-size: 12px">Estimated number of hours spent by agents on calls as a result of the error.</div>
+                    </div>
+    
+                    <div id="hours_lost_cost" style="width: 350px; float:left; margin-left: 20px; visibility: hidden;">
+                        <div style="float: left;margin-left:-5px; margin-top:6px"><img src="images/sales.png" alt="user" width=60px height=60px></div>
+                        <div id="hours_lost_cost_result" style="font-size: 40px; float:left; margin-top: 10px">£--.--</div>
+                        <div style="float:left; margin-top:17px; margin-left: 15px">Potential cost of<br />calls</div>
+                        <div style="float: left; margin-left: 5px; font-size: 12px">The estimated cost of agents handling calls associated with the error.</div>
+                    </div>   
+                    </div>      
+               
+                </div>
+
+
+
+
+
+
+
+
+
+                <div id="incurred_costs_results" style="display: none; margin-bottom: 20px; width: 100%">
+             
+                    <div id="incurred_costs_analysis" style="margin-bottom: 20px">
+    
+                    <div id="incurred_costs_cost" style="width: 350px; float:left;">
+                        <div style="float: left;margin-left:-5px; margin-top:6px"><img src="images/sales-options.png" alt="user" width=60px height=60px></div>
+                        <div id="incurred_costs_result" style="font-size: 40px; float:left; margin-top: 10px">£--.--</div>
+                        <div style="float:left; margin-top:17px; margin-left: 15px">Potential costs<br />incurred</div>
+                        <div style="float: left; margin-left: 5px; font-size: 12px">The estimated revenue impact from users hitting the error in your application.</div>
+                    </div>   
+                    </div>      
+               
+                </div>
+
+                <div style="margin-top: 50px;  float:left; width: 100%"><h3 id="lostText" >Potential business impact over the next...</h3></div>
+
+                <div id="fourteen_container" style="width: 300px; float:left">
+                    <div  style="font-size: 50px; float:left">14</div>
+                    <div style="float:left; margin-top:12px; margin-left: 5px">days</div>
+                </div>
+
+                <div id="twentyone_container" style="width: 300px; float:left">
+                    <div  style="font-size: 50px; float:left">21</div>
+                    <div style="float:left; margin-top:12px; margin-left: 5px">days</div>
+                </div>
+
+                <div id="twentyeight_container" style="width: 300px; float:left">
+                    <div style="font-size: 50px; float:left">28</div>
+                    <div style="float:left; margin-top:12px; margin-left: 5px">days</div>
+                </div>
+
+                <div id="basket_fourteen_results_container" style="width: 300px; float:left">
+                    <div class="basket_results_title" style="display: none; float: left; width: 100%">Due to lost baskets...</div>
+                    <div id="basket_fourteen_results_users" style="font-size: 30px; display: none; float: left; width: 100%">£--.--</div>
+                    <div class="hours_results_title" style="display: none;float: left; width: 100%; margin-top: 15px;">Due to call centre load...</div>
+                    <div id="hours_fourteen_results_users" style="font-size: 30px; display: none; float: left; width: 100%">---</div> 
+                    <div id="hours_fourteen_results_cost" style="font-size: 30px; display: none; float: left; width: 100%">£--.--</div>
+                    <div class="costs_results_title" style="display: none;float: left; width: 100%; margin-top: 15px;">Due to incurred costs...</div>
+                    <div id="cost_fourteen_results_users" style="font-size: 30px; display: none; float: left; width: 100%">£--.--</div>
+                </div>
+
+                <div id="basket_twentyone_results_container" style="width: 300px; float:left">
+                    <div class="basket_results_title" style="display: none;float: left; width: 100%">&nbsp; </div>
+                    <div id="basket_twentyone_results_users" style="font-size: 30px; display: none;float: left; width: 100%">£--.--</div>
+                    <div class="hours_results_title" style="display: none;float: left; width: 100%; margin-top: 15px;">&nbsp;</div>
+                    <div id="hours_twentyone_results_users" style="font-size: 30px; display: none;float: left; width: 100%">---</div> 
+                    <div id="hours_twentyone_results_cost" style="font-size: 30px; display: none;float: left; width: 100%">£--.--</div>
+                    <div class="costs_results_title" style="display: none;float: left; width: 100%; margin-top: 15px;">&nbsp;</div>
+                    <div id="cost_twentyone_results_users" style="font-size: 30px; display: none;float: left; width: 100%">£--.--</div>
+                </div>
+
+                <div id="basket_twentyeight_results_container" style="width: 300px; float:left">
+                    <div class="basket_results_title" style="display: none;float: left; width: 100%">&nbsp; </div>
+                    <div id="basket_twentyeight_results_users" style="font-size: 30px; display: none;float: left; width: 100%">£--.--</div>
+                    <div class="hours_results_title" style="display: none;float: left; width: 100%; margin-top: 15px;">&nbsp;</div>
+                    <div id="hours_twentyeight_results_users" style="font-size: 30px; display: none;float: left; width: 100%">---</div> 
+                    <div id="hours_twentyeight_results_cost" style="font-size: 30px; display: none;float: left; width: 100%">£--.--</div>
+                    <div class="costs_results_title" style="display: none;float: left; width: 100%; margin-top: 15px;">&nbsp;</div>
+                    <div id="cost_twentyeight_results_users" style="font-size: 30px; display: none;float: left; width: 100%">£--.--</div>
+                </div>
+
+                <br /><br />
+
+              </div>  
+
+        </div>      
+
+    </div>   
+    
+    <br /><br />
+
+    <script type="text/javascript" src="js/main.js"></script>   
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script> 
+    <script type="text/javascript">
+
+    google.charts.load('current', {'packages':['corechart']});
+
+    function drawPieChart(breakdown_array) {
+        var data = google.visualization.arrayToDataTable(breakdown_array);
+
+        var options = {'title':'Lost user breakdown by channel', 'width':400, 'height':200, colors: ['#5ead35', '#008cdb', '#7c38a1']};
+
+        var chart = new google.visualization.PieChart(document.getElementById('user_breakdown'));
+        chart.draw(data, options);
+    }
+
+    function drawBarChart(dateBreakdown) {
+        var data = google.visualization.arrayToDataTable(dateBreakdown);
+
+        var options = {'title':'Occurence of error over time', 'width':500, 'height':200, legend: {position: 'none'}};
+
+        var chart = new google.visualization.ColumnChart(document.getElementById('over_time'));
+        chart.draw(data, options);
+    }
+
+    var coll = document.getElementsByClassName("collapsible");
+        var i;
+
+        for (i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.maxHeight){
+            content.style.maxHeight = null;
+            } else {
+            content.style.maxHeight = content.scrollHeight + "px";
+            } 
+        });
+        }
+
+        document.getElementsByClassName("collapsible")[0].click();
+
+        document.querySelectorAll('.inputfield').forEach(item => {
+            item.addEventListener('blur', event => {
+                if(document.getElementById("tenant").value != "" && document.getElementById("token").value != null && document.getElementById("error") != null && document.getElementById("conversion").value != "") {
+
+                    var check_length = document.querySelectorAll(".checkbox:checked").length;
+                    var use_case_check=0;
+
+                        if(document.getElementById("lost_order").checked == true && document.getElementById("basket").value != "") {
+
+                            use_case_check++;
+
+                        }
+
+                        if(document.getElementById("agent_hours").checked == true && document.getElementById("percent_users").value != "" && document.getElementById("call_length").value != "") {
+
+                            use_case_check++;
+
+                        }
+
+                        if(document.getElementById("incurred_costs").checked == true && document.getElementById("error_cost").value != "") {
+
+                            use_case_check++;
+
+                        }
+
+                        if(check_length == 0) {
+
+                            document.getElementById("fetchErrors").disabled=true;
+
+                        }
+
+                        else if(use_case_check == check_length) {
+
+                            document.getElementById("fetchErrors").disabled=false;
+
+                        }
+
+                        else if (use_case_check != check_length) {
+
+                            document.getElementById("fetchErrors").disabled=true;
+
+                        }
+
+                }
+
+                else {
+
+                    document.getElementById("fetchErrors").disabled=true;
+
+                }
+            })
+        })
+
+        document.querySelectorAll('.checkbox').forEach(item => {
+            item.addEventListener('click', event => {
+                if(document.getElementById("tenant").value != "" && document.getElementById("token").value != null && document.getElementById("error") != null && document.getElementById("conversion").value != "") {
+
+                    var check_length = document.querySelectorAll(".checkbox:checked").length;
+                    var use_case_check=0;
+
+                        if(document.getElementById("lost_order").checked == true && document.getElementById("basket").value != "") {
+
+                            use_case_check++;
+
+                        }
+
+                        if(document.getElementById("agent_hours").checked == true && document.getElementById("percent_users").value != "" && document.getElementById("call_length").value != "") {
+
+                            use_case_check++;
+
+                        }
+
+                        if(document.getElementById("incurred_costs").checked == true && document.getElementById("error_cost").value != "") {
+
+                            use_case_check++;
+
+                        }
+
+                        if(check_length == 0) {
+
+                            document.getElementById("fetchErrors").disabled=true;
+
+                        }
+
+                        else if(use_case_check == check_length) {
+
+                            document.getElementById("fetchErrors").disabled=false;
+
+                        }
+
+                        else if (use_case_check != check_length) {
+
+                            document.getElementById("fetchErrors").disabled=true;
+
+                        }
+
+                }
+
+                else {
+
+                    document.getElementById("fetchErrors").disabled=true;
+
+                }
+            })
+        })
+        
+    </script>
+    
+    </body>
+
+</html>
