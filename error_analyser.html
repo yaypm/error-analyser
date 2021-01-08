@@ -119,6 +119,19 @@
                 document.getElementById("error_container").style.visibility="visible";
 
                 var tenant = document.getElementById("tenant").value;
+
+                if(tenant.search("https://") == 0) {
+
+                    tenant = tenant.substring(8);
+
+                }
+
+                if(tenant.charAt(tenant.length-1) == "/") {
+
+                    tenant = tenant.slice(0, -1);
+
+                }
+
                 var token = document.getElementById("token").value;
                 var error = document.getElementById("error").value;
 
@@ -133,7 +146,7 @@
 		            mode: 'cors',
                 };
 
-                fetch('https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20DISTINCT%20stringProperties.' + error + '%2C%20count(*)%20FROM%20usersession%20WHERE%20stringProperties.' + error + '%20IS%20NOT%20NULL&startTimestamp=' + oneDay.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
+                fetch('https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20DISTINCT%20stringProperties.' + error + '%2C%20count(*)%20FROM%20usersession%20WHERE%20stringProperties.' + error + '%20IS%20NOT%20NULL&startTimestamp=' + oneDay.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
 
                     .then(function(response) {
 
@@ -189,6 +202,19 @@
             function analyseErrors() {
 
                 var tenant = document.getElementById("tenant").value;
+
+                if(tenant.search("https://") == 0) {
+
+                    tenant = tenant.substring(8);
+
+                }
+
+                if(tenant.charAt(tenant.length-1) == "/") {
+
+                    tenant = tenant.slice(0, -1);
+
+                }
+
                 var token = document.getElementById("token").value;
                 var error = document.getElementById("error").value;
                 var conversion = document.getElementById("conversion").value;
@@ -231,7 +257,7 @@
 		            mode: 'cors',
                 };
 
-                fetch('https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20count(*)%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDays.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
+                fetch('https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20count(*)%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDays.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
                  
                     .then(function(response) {
 
@@ -304,13 +330,13 @@
                               
                                 if(lost_basket_selected == true) {
 
-                                    query = 'https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
+                                    query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
 
                                 }
 
                                 else {
 
-                                    query = 'https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
+                                    query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
 
                                 }
                                 
@@ -746,13 +772,13 @@
 
                             if(lost_basket_selected == true) {
 
-                                query = 'https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
+                                query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
 
                             }
 
                             else {
 
-                                query = 'https://' + tenant + '.live.dynatrace.com/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
+                                query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
 
                             }
 
@@ -1197,16 +1223,16 @@
             <div style="width: 700px" class="content">
 
             <div id="tenant_container" style="float:left">
-                <label for="tenant" class="label required">Tenant Id</label>
-                <input style="width:150px;" type="text" class="inputfield" placeholder="xxxxxxxx.live.dynatrace.com" id="tenant" value=""/>
+                <label for="tenant" class="label required">Dynatrace environment<div class="tooltip"><img width=20px height=20px src="images/help-grey.png" style="float: left" /><div class="tooltiptext"><b>SaaS</b>: {your-environment-id}.live.dynatrace.com<br /> <i>e.g. abc12345.live.dynatrace.com</i> <br /><br /><b>Managed</b>: {your-domain}/e/{your-environment-id} <br /><i>e.g. abc12345.dynatrace-managed.com/e/123a456b-1a23-1a2b-a1b2-a123b4c5d6e7</i> </div></div></label>
+                <input style="width:200px;" type="text" class="inputfield" placeholder="Please see tooltip" id="tenant" value=""/>
             </div>
 
-            <div id="token_container" style="float:left; margin-left: 5px">
+            <div id="token_container" style="float:left; margin-left: 5px; margin-top: 8px">
                 <label for="token" class="label required">API token</label>
-                <input style="width:250px;" type="text" class="inputfield" placeholder="User session access needed" id="token" value=""/>
+                <input style="width:200px;" type="text" class="inputfield" placeholder="User session access needed" id="token" value=""/>
             </div>
 
-            <div id="property_container" style="float:left; margin-left: 5px">
+            <div id="property_container" style="float:left; margin-left: 5px; margin-top: 8px">
                 <label for="tag" class="label required">Error property</label>
                 <input style="width:150px;" type="text" class="inputfield" placeholder="Must be a string" id="error" value=""/>
             </div>
