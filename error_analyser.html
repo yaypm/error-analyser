@@ -134,8 +134,21 @@
 
                 var token = document.getElementById("token").value;
                 var error = document.getElementById("error").value;
+                var application = document.getElementById("application").value;
 
                 var errorList = document.getElementById("errorList");
+
+                if(application != null && application != "") {
+
+                    application = "%20useraction.application%20IS%20%22" + encodeURI(application) + "%22%20AND%20";
+
+                }
+
+                else {
+
+                    application = "%20";
+
+                }
 
                 var myHeaders = new Headers();
                 myHeaders.append("Authorization", "Api-Token " + token);
@@ -146,7 +159,7 @@
 		            mode: 'cors',
                 };
 
-                fetch('https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20DISTINCT%20stringProperties.' + error + '%2C%20count(*)%20FROM%20usersession%20WHERE%20stringProperties.' + error + '%20IS%20NOT%20NULL&startTimestamp=' + oneDay.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
+                fetch('https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20DISTINCT%20stringProperties.' + error + '%2C%20count(*)%20FROM%20usersession%20WHERE' + application + 'stringProperties.' + error + '%20IS%20NOT%20NULL&startTimestamp=' + oneDay.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
 
                     .then(function(response) {
 
@@ -189,6 +202,34 @@
                             document.getElementById("results_container").style.visibility="hidden";
                             document.getElementById("results_container").style.display="none";
 
+
+                            // fetch('https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20DISTINCT(application)%20FROM%20useraction&startTimestamp=' + oneDay.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
+
+                            // .then(function(response) {
+
+                            //     return response.json();
+
+                            // })
+
+                            // .then(function(jsonResponse) {
+
+                            //     // for(i= appList.length; i > -1; i--) {
+                                
+                            //     //     appList.remove(i);
+                                
+                            //     // }
+
+                            //     jsonResponse.values.forEach(function(item){
+                            //     var newApp = document.createElement("option");
+
+                            //         newApp.value = item[0];
+                            //         newApp.text = item[0];
+                            //         appList.add(newApp);
+                                 
+                            //     })
+
+                            // })
+
                         }
 
                         else {
@@ -221,9 +262,11 @@
                 var single_error = document.getElementById("errorList").value;
                 var original_single_error = single_error;
                 single_error = single_error.replace(/"/g, '\"\"');
+                var application = document.getElementById("application").value;
 
                 var basket = document.getElementById("basket").value;
                 var margin = document.getElementById("margin").value;
+                var monthly = document.getElementById("monthly").value;
 
                 var percent_users = document.getElementById("percent_users").value;
                 var call_length = document.getElementById("call_length").value;
@@ -234,7 +277,7 @@
                 var numlostUsers;
                 var lostBasketValue;
 
-                getRawData(tenant, token, error, basket, margin, conversion, single_error, original_single_error, percent_users, call_length, call_cost, error_cost);
+                getRawData(tenant, token, error, application, basket, margin, monthly, conversion, single_error, original_single_error, percent_users, call_length, call_cost, error_cost);
 
                 hideAll();
 
@@ -242,11 +285,23 @@
                 document.getElementById("results_container").style.display="inline-block";
             }
 
-            function getRawData(tenant, token, error, basket, margin, conversion, single_error, original_single_error, percent_users, call_length, call_cost, error_cost) {
+            function getRawData(tenant, token, error, application, basket, margin, monthly, conversion, single_error, original_single_error, percent_users, call_length, call_cost, error_cost) {
 
                 lost_basket_selected = document.getElementById("lost_order").checked;
                 agent_hours_selected = document.getElementById("agent_hours").checked;
                 costs_selected = document.getElementById("incurred_costs").checked;
+
+                if(application != null && application != "") {
+
+                    application = "%20useraction.application%20IS%20%22" + encodeURI(application) + "%22%20AND%20";
+
+                }
+
+                else {
+
+                    application = "%20";
+
+                }
 
                 var myHeaders = new Headers();
                 myHeaders.append("Authorization", "Api-Token " + token);
@@ -257,7 +312,7 @@
 		            mode: 'cors',
                 };
 
-                fetch('https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20count(*)%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDays.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
+                fetch('https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20count(*)%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDays.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
                  
                     .then(function(response) {
 
@@ -330,13 +385,13 @@
                               
                                 if(lost_basket_selected == true) {
 
-                                    query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
+                                    query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
 
                                 }
 
                                 else {
 
-                                    query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
+                                    query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
 
                                 }
                                 
@@ -567,6 +622,12 @@
 
                                                 document.getElementById("lost_basket_results").style.display="inline-block";
 
+                                                if(monthly != null && monthly != 0) {
+
+                                                    lostBasket = lostBasket * monthly;
+
+                                                }
+
                                                 document.getElementById("lost_basket").innerText="£" + lostBasket.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
 
                                                 if(margin == "") {
@@ -772,13 +833,13 @@
 
                             if(lost_basket_selected == true) {
 
-                                query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
+                                query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
 
                             }
 
                             else {
 
-                                query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE%20useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
+                                query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
 
                             }
 
@@ -998,6 +1059,12 @@
                                             if(lost_basket_selected == true) {
 
                                                 document.getElementById("lost_basket_results").style.display="inline-block";
+
+                                                if(monthly != null && monthly != 0) {
+
+                                                    lostBasket = lostBasket * monthly;
+
+                                                }
 
                                                 document.getElementById("lost_basket").innerText="£" + lostBasket.toLocaleString('en-GB',{ maximumFractionDigits: 0 });
 
@@ -1246,6 +1313,10 @@
                     <input style="width:300px;" type="text" class="inputfield" placeholder="Exact name of the action" id="conversion" value=""/>
                 </div>        
 
+                <div id="application_container" style="float:left; margin-left: 5px; ">
+                    <label for="application" class="label">Application</label>
+                    <input style="width:255px;" type="text" class="inputfield" placeholder="Display name of the application" id="application" value=""/>
+                </div>
 
             <br /><br />
             
@@ -1271,6 +1342,11 @@
                 <div id="margin_container">
                     <label for="margin" class="label">Margin (%)</label>
                     <input style="width:150px;" type="text" class="inputfield" placeholder="% percent" id="margin" value=""/>
+                </div>
+                <br />
+                <div id="monthly_container">
+                    <label for="margin" class="label">Monthly multiplication factor</label>
+                    <input style="width:150px;" type="text" class="inputfield" placeholder="# of months" id="monthly" value=""/>
                 </div>
             </div>
 
@@ -1338,6 +1414,12 @@
                 <select class="select" id="errorList" style="width: 500px">
                     <option value="loading" selected="selected">Loading...</option>
                 </select>
+
+                <!-- <br /> <br />
+
+                <select class="select" id="appList" style="width: 500px">
+                    <option value="loading" selected="selected">(optional) Select an application to filter by</option>
+                </select> -->
 
                 <div id="fetchErrors_container" style="display: inline-block; width: 90px; margin-left: 5px;">
                     <button id="fetchErrors" role="button" type="button" class="btn btn--primary" onclick="analyseErrors()">Analyse</button>
