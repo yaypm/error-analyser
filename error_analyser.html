@@ -312,7 +312,7 @@
 		            mode: 'cors',
                 };
 
-                fetch('https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20count(*)%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDays.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
+                fetch('https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20count(*)%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURIComponent(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDays.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
                  
                     .then(function(response) {
 
@@ -385,13 +385,13 @@
                               
                                 if(lost_basket_selected == true) {
 
-                                    query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
+                                    query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURIComponent(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
 
                                 }
 
                                 else {
 
-                                    query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
+                                    query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURIComponent(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + startTime + '&endTimestamp=' + endTime + '&addDeepLinkFields=false&explain=false';
 
                                 }
                                 
@@ -837,13 +837,13 @@
 
                             if(lost_basket_selected == true) {
 
-                                query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
+                                query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20doubleProperties.' + basket + '%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURIComponent(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
 
                             }
 
                             else {
 
-                                query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURI(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
+                                query = 'https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20internalUserId%2C%20stringProperties.' + error + '%2C%20startTime%2C%20endTime%2C%20useraction.name%2C%20browserType%20FROM%20usersession%20WHERE' + application + 'useraction.name%20IS%20%22' + encodeURIComponent(conversion) + '%22%20OR%20stringProperties.' + error + '%20IS%20%22' + encodeURI(single_error) + '%22%20LIMIT%205000&startTimestamp=' + sevenDaysInt + '&endTimestamp=' + todayInt + '&addDeepLinkFields=false&explain=false';
 
                             }
 
