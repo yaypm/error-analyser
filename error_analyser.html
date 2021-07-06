@@ -159,7 +159,7 @@
 		            mode: 'cors',
                 };
 
-                fetch('https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20DISTINCT%20stringProperties.' + error + '%2C%20count(*)%20FROM%20usersession%20WHERE' + application + 'stringProperties.' + error + '%20IS%20NOT%20NULL&startTimestamp=' + oneDay.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
+                fetch('https://' + tenant + '/api/v1/userSessionQueryLanguage/table?query=SELECT%20DISTINCT%20stringProperties.' + error + '%2C%20count(*)%20FROM%20usersession%20WHERE' + application + 'stringProperties.' + error + '%20IS%20NOT%20NULL&startTimestamp=' + sevenDays.getTime() + '&endTimestamp=' + todaysDate.getTime() + '&addDeepLinkFields=false&explain=false', myInit)
 
                     .then(function(response) {
 
